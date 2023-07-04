@@ -4,7 +4,6 @@ import torch
 from torch.nn import functional as F
 import torch.nn as nn
 from torch.nn import Parameter
-from torch.autograd import Variable
 
 
 torch.manual_seed(0)  # for reproducibility
@@ -18,7 +17,6 @@ SIGMA_1 = torch.FloatTensor([math.exp(-0)]).to(DEVICE)
 SIGMA_2 = torch.FloatTensor([math.exp(-6)]).to(DEVICE)
 NUM_SAMPLES = 5
 
-
 def factorized_normal(x, mu, sigma):
     likelihood = torch.exp(-0.5 * (x - mu)**2 / sigma**2) / np.sqrt(2.0*np.pi) / sigma
     return torch.clamp(likelihood, 1e-10, 1.)  # clip to avoid numerical issues
@@ -30,9 +28,9 @@ def log_factorized_normal(x, mu, sigma):
 
 
 def log_mixture_prior(input_, weight_first=WEIGHT_1, sigma_first=SIGMA_1, sigma_second=SIGMA_2):
-    likelihood_first = factorized_normal(input_, 0., sigma_first)
-    likelihood_second = factorized_normal(input_, 0., sigma_second)
-    likelihood = weight_first * likelihood_first + (1 - weight_first) * likelihood_second
+    prob_first = factorized_normal(input_, 0., sigma_first)
+    prob_second = factorized_normal(input_, 0., sigma_second)
+    likelihood = weight_first * prob_first + (1 - weight_first) * prob_second
     return torch.log(likelihood)
 
 
@@ -56,7 +54,7 @@ class Linear(nn.Module):
 
     def reset_parameters(self):
         self.W.data.normal_(0., .1)
-        self.W_rho.data.uniform_(-3., -.3)
+        self.W_rho.data.uniform_(-3., -3.)
         self.bias.data.normal_(0., .1)
         self.bias_rho.data.uniform_(-3., -3.)
         # self.log_sigma.data.fill_(-5)
@@ -79,7 +77,12 @@ class Linear(nn.Module):
                 torch.log(factorized_normal(W_sample, self.W, sigma)).sum()
                 + torch.log(factorized_normal(bias_sample, self.bias, bias_sigma)).sum()
             )
-            return F.linear(x, W_sample) + bias_sample
+            return F.linear(x, W_sample) + self.bias
+
+            # lrt_mean =  F.linear(x, self.W) + self.bias
+            # lrt_std = torch.sqrt(F.linear(x * x, sigma * sigma) + bias_sigma * bias_sigma + 1e-8)
+            # eps = lrt_std.data.new(lrt_std.size()).normal_()
+            # return lrt_mean + lrt_std * eps #+ bias_sigma * epsilon_bias
 
         return F.linear(x, self.W) + self.bias
 
@@ -134,16 +137,17 @@ class Loss(nn.Module):
         kl, log_likelihood = 0., 0.
         for _ in range(self.num_samples):
             output = self.net.forward(input_)
-            sample_kl = self.get_kl().float()
+            sample_kl = self.get_kl()
             # if self.CLASSES > 1:
             #     sample_log_likelihood = -F.nll_loss(output, target, reduction='sum')
             # else:
-            sample_log_likelihood = -(.5 * (target - output)**2).sum().float()
+            sample_log_likelihood = -(.5 * (target - output)**2).sum()
             kl += sample_kl
             log_likelihood += sample_log_likelihood
 
         kl /= self.num_samples
         log_likelihood /= self.num_samples
-        # return 0.1 * kl - log_likelihood
-        return 0.1 * kl - log_likelihood #* self.train_size / target.size(0)
+        return 0.1 * kl - log_likelihood
+        # scaler = self.train_size / target.size(0)
+        # return (kl - log_likelihood * scaler) * 0.1
 
