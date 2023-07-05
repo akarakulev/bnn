@@ -10,12 +10,10 @@ torch.manual_seed(0)  # for reproducibility
 DEVICE = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 
-INPUT_SHAPE = 1
-OUTPUT_SHAPE = 1
 WEIGHT_1 = 0.25
 SIGMA_1 = torch.FloatTensor([math.exp(-0)]).to(DEVICE)
 SIGMA_2 = torch.FloatTensor([math.exp(-6)]).to(DEVICE)
-NUM_SAMPLES = 5
+NUM_SAMPLES = 1
 
 def factorized_normal(x, mu, sigma):
     likelihood = torch.exp(-0.5 * (x - mu)**2 / sigma**2) / np.sqrt(2.0*np.pi) / sigma
@@ -132,7 +130,7 @@ class Loss(nn.Module):
 
         kl /= self.num_samples
         log_likelihood /= self.num_samples
-        return (0.1 * kl - log_likelihood)
-        # scaler = self.train_size / target.size(0)
-        # return (kl - log_likelihood * scaler) * 0.1
+        # return (0.1 * kl - log_likelihood)
+        scaler = self.train_size / target.size(0)
+        return (kl - log_likelihood * scaler) * 0.1
 
