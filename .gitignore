@@ -7,6 +7,9 @@ examples/covid-data/cell_morphology.csv
 # Data
 data/
 
+# Logs
+**/logs/
+
 # macOS files
 **.DS_Store
 
