@@ -92,29 +92,13 @@ class Linear(nn.Module):
         return kl
 
 
-class Net(nn.Module):
-    def __init__(self):
-        super().__init__()
-        self.fc1 = Linear(INPUT_SHAPE, 16)
-        self.fc2 = Linear(16,  16)
-        self.fc3 = Linear(16, 16)
-        self.fc4 = Linear(16,  OUTPUT_SHAPE)
-
-    def forward(self, x):
-        x = x.view(-1, self.fc1.in_features)
-        x = F.relu(self.fc1(x))
-        x = F.relu(self.fc2(x))
-        x = F.relu(self.fc3(x))
-        x = self.fc4(x)
-        return x
-
-
 # Define Loss Function -- SGVLB
 class Loss(nn.Module):
-    def __init__(self, net, train_size):
+    def __init__(self, net, train_size, problem='regression'):
         super().__init__()
         self.train_size = train_size
         self.net = net
+        self.problem = problem
         self.num_samples = NUM_SAMPLES
 
     def get_kl(self):
@@ -138,10 +122,11 @@ class Loss(nn.Module):
         for _ in range(self.num_samples):
             output = self.net.forward(input_)
             sample_kl = self.get_kl()
-            # if self.CLASSES > 1:
-            #     sample_log_likelihood = -F.nll_loss(output, target, reduction='sum')
-            # else:
-            sample_log_likelihood = -(.5 * (target - output)**2).sum()
+            if self.problem == 'classification':
+                sample_log_likelihood = -F.nll_loss(output, target, reduction='sum')
+            elif self.problem == 'regression':
+                sample_log_likelihood = -(.5 * (target - output)**2).sum()
+
             kl += sample_kl
             log_likelihood += sample_log_likelihood
 
