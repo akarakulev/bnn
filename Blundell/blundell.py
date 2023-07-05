@@ -40,9 +40,7 @@ class Linear(nn.Module):
         self.bias_rho = Parameter(torch.Tensor(1, out_features))
         self.reset_parameters()
 
-        # Initialise prior and posterior
-        self.log_prior = 0.
-        self.log_post = 0.
+        self.kl_term = 0.
 
     def reset_parameters(self):
         self.W.data.normal_(0., .1)
@@ -63,18 +61,18 @@ class Linear(nn.Module):
             W_sample = self.W + sigma * epsilon_weight
             bias_sample = self.bias + bias_sigma * epsilon_bias
 
-            self.log_prior = log_mixture_prior(W_sample).sum() + log_mixture_prior(bias_sample).sum()
-            self.log_post = (
+            log_prior = log_mixture_prior(W_sample).sum() + log_mixture_prior(bias_sample).sum()
+            log_post = (
                 log_factorized_normal(W_sample, self.W, sigma).sum()
                 + log_factorized_normal(bias_sample, self.bias, bias_sigma).sum()
             )
-            return F.linear(x, W_sample) + self.bias
+            self.kl_term = log_post - log_prior
+            return F.linear(x, W_sample) + bias_sample
 
         return F.linear(x, self.W) + self.bias
 
     def kl_reg(self):
-        kl = self.log_post - self.log_prior
-        return kl
+        return self.kl_term
 
 
 class Loss(nn.Module):
