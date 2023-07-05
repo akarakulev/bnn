@@ -1,6 +1,7 @@
 import torch
-from torch.nn import functional as F
-import torch.nn as nn
+from torch import nn
+import torch.nn.functional as F
+from layer import Linear
 from torch.nn import Parameter
 
 
@@ -34,3 +35,25 @@ class Linear(nn.Module):
         # Return KL here -- a scalar
         kl = 0.5 * (torch.norm(self.W)**2 + torch.norm(self.bias)**2)
         return kl
+
+
+# Define Loss Function -- SGVLB
+class Loss(nn.Module):
+    def __init__(self, net, train_size, problem='regression'):
+        super(Loss, self).__init__()
+        self.train_size = train_size
+        self.net = net
+        self.problem = problem
+
+    def forward(self, output, target):
+        assert not target.requires_grad
+        kl = 0.0
+        for module in self.net.children():
+            if hasattr(module, 'kl_reg'):
+                kl = kl + module.kl_reg()
+        if self.problem == 'regression':
+            neg_log_likelihood = -(.5 * (target - output)**2).sum() / target.size(0)
+        elif self.problem == 'classification':
+            neg_log_likelihood = F.cross_entropy(output, target)
+        
+        return neg_log_likelihood * self.train_size + kl
