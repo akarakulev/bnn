@@ -147,7 +147,7 @@ class Loss(nn.Module):
 
         kl /= self.num_samples
         log_likelihood /= self.num_samples
-        return 0.1 * kl - log_likelihood
+        return (0.1 * kl - log_likelihood)
         # scaler = self.train_size / target.size(0)
         # return (kl - log_likelihood * scaler) * 0.1
 
