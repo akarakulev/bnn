@@ -4,6 +4,9 @@ examples/covid-data/cell_morphology.csv
 # VScode
 .vscode
 
+# Data
+data/
+
 # macOS files
 **.DS_Store
 
