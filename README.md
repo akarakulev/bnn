@@ -15,3 +15,6 @@
     - `Blundell/Classification Blundell.ipynb` – MNIST classification
     - `Blundell/Regression Blundell.ipynb` – 1-d curve fitting
     - Reference: [Blundell et al., 2015](https://arxiv.org/pdf/1505.05424.pdf)
+
+- Also, see other resources that were used for current implementation and could be useful for extensions:
+    -  [Variational Dropout Sparsifies Deep Neural Networks](https://github.com/bayesgroup/variational-dropout-sparsifies-dnn.git): effective variant of dropout for BNNs, realized as a Bayesian procedure
